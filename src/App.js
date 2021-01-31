@@ -8,7 +8,6 @@ import {
   Col,
   Button,
 } from 'react-bootstrap'
-import _ from 'lodash'
 import moment from 'moment'
 import './App.css'
 import 'bootstrap/dist/css/bootstrap.min.css'
@@ -22,8 +21,7 @@ function App() {
     event.preventDefault()
     setErrorMessage(false)
     const itemName = refItemName.current.value
-    console.log(_.isNumber(itemName))
-    if (!_.isNumber(itemName)) {
+    if (isNaN(itemName))
       if (!shoppingListItems.includes(refItemName.current.value)) {
         setShoppingListItems((prevShoppingListItems) => [
           ...prevShoppingListItems,
@@ -33,16 +31,26 @@ function App() {
       } else {
         setErrorMessage(`Item ${itemName} is already on the list`)
       }
-    } else {
-      setErrorMessage('Item name cannot be a number')
-    }
+
+    if (!isNaN(itemName)) setErrorMessage('Item name cannot be a number')
   }
 
   const handleItemBought = (itemName) => {
     const boughtItem = shoppingListItems.find(
       (item) => item.itemName === itemName
     )
+    boughtItem.bought = !boughtItem.bought ? new Date() : boughtItem.bought
+    const newShoppingListItems = shoppingListItems.filter(
+      (item) => item.itemName !== itemName
+    )
+    setShoppingListItems([...newShoppingListItems, boughtItem])
+  }
+  const handleItemNeeded = (itemName) => {
+    const boughtItem = shoppingListItems.find(
+      (item) => item.itemName === itemName
+    )
     boughtItem.bought = !boughtItem.bought
+    boughtItem.added = new Date()
     const newShoppingListItems = shoppingListItems.filter(
       (item) => item.itemName !== itemName
     )
@@ -52,6 +60,13 @@ function App() {
   const handleClearShoppingList = (event) => {
     event.preventDefault()
     setShoppingListItems([])
+  }
+
+  const handleRemoveItem = (itemName) => {
+    const newShoppingListItems = shoppingListItems.filter(
+      (item) => item.itemName !== itemName
+    )
+    setShoppingListItems(newShoppingListItems)
   }
 
   const handleRemoveBoughtItems = (event) => {
@@ -75,21 +90,28 @@ function App() {
 
   return (
     <div className='App'>
-      <Navbar bg='primary' variant='dark' expand='lg'>
+      <Navbar bg='dark' variant='dark' expand='lg'>
         <Container fluid>
           <Row className='w-100'>
-            <Col xs={3} md={2}>
-              <Navbar.Brand href='#home'>ShoppingList</Navbar.Brand>
-            </Col>
-            <Col xs={9} md={10}>
-              <Form onSubmit={handleSubmit} className='w-100'>
+            <Form onSubmit={handleSubmit} className='w-100' inline>
+              <Col xs={3} md={2}>
+                <Navbar.Brand href='#home'>ShoppingList</Navbar.Brand>
+              </Col>
+              <Col xs={8} md={9}>
                 <Form.Control
+                  className='w-100'
                   type='text'
                   placeholder='Search/Add item'
                   ref={refItemName}
+                  required
                 />
-              </Form>
-            </Col>
+              </Col>
+              <Col xs={1}>
+                <Button className='w-100' type='submit'>
+                  Submit
+                </Button>
+              </Col>
+            </Form>
           </Row>
         </Container>
       </Navbar>
@@ -106,22 +128,47 @@ function App() {
         {shoppingListItems.map((item, index) => (
           <Alert
             className='my-1'
-            variant='primary'
+            variant={item.bought ? 'success' : 'primary'}
             key={index}
             dismissible
-            onClose={() => handleItemBought(item.itemName)}
+            onClose={() => handleRemoveItem(item.itemName)}
           >
-            {item.bought ? (
-              <span>
-                <del>{item.itemName}</del> (Added:{' '}
-                {moment(item.added).format('YYYY-MM-DD HH:mm:ss')})
-              </span>
-            ) : (
-              <span>
-                {item.itemName} (Added:{' '}
-                {moment(item.added).format('YYYY-MM-DD HH:mm:ss')})
-              </span>
-            )}
+            <Container>
+              <Row className='align-items-center'>
+                <Col xs={10}>
+                  {item.bought ? (
+                    <>
+                      <del>{item.itemName}</del> (Bought:{' '}
+                      {moment(item.bought).format('YYYY-MM-DD HH:mm:ss')})
+                    </>
+                  ) : (
+                    <>
+                      {item.itemName} (Added:{' '}
+                      {moment(item.added).format('YYYY-MM-DD HH:mm:ss')})
+                    </>
+                  )}
+                </Col>
+                <Col xs={2}>
+                  {item.bought ? (
+                    <Button
+                      onClick={() => handleItemNeeded(item.itemName)}
+                      className='my-0'
+                      variant='success'
+                    >
+                      Need it
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => handleItemBought(item.itemName)}
+                      className='my-0'
+                      variant='primary'
+                    >
+                      Bought it
+                    </Button>
+                  )}
+                </Col>
+              </Row>
+            </Container>
           </Alert>
         ))}
         <Button className='mr-1' onClick={handleClearShoppingList}>
